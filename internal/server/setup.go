@@ -16,7 +16,7 @@ func Setup(cfg *config.ConfServer) error {
 	serverPort := fmt.Sprintf(":%d", cfg.Port)
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+		return c.SendString("Hello, World!!!")
 	})
 
 	return app.Listen(serverPort)
