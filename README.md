@@ -41,10 +41,9 @@ DB_PORT=5432
 DB_USER=app_user
 DB_PASSWORD=app_password
 DB_NAME=app_name
-
 ```
 
-ENV может также иметь значение ```prod```
+ENV может также иметь значение `prod`
 
 ## Запуск программы c использованием Docker
 
@@ -65,6 +64,9 @@ docker compose up --build
 - `POST /tasks` - создать новую задачу
 - `PUT /tasks/:id` - обновить задачу
 - `DELETE /tasks/:id` - удалить задачу
+
+## Swagger
+Для просмотра документации нужно перейти по адресу: `http://localhost:{порт_указанный_в_env}/swagger/index.html`
 
 ## Структура проекта
 
