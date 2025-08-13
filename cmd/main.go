@@ -5,6 +5,7 @@ import (
 
 	"github.com/NERFTHISPLS/rest-todo-list/internal/config"
 	"github.com/NERFTHISPLS/rest-todo-list/internal/database"
+	"github.com/NERFTHISPLS/rest-todo-list/internal/repository"
 	"github.com/NERFTHISPLS/rest-todo-list/internal/server"
 )
 
@@ -21,7 +22,9 @@ func main() {
 		log.Fatalf("error while migrating to database: %s\n", err)
 	}
 
-	if err := server.Setup(&cfg.Server, dbpool); err != nil {
+	repo := repository.NewTaskRepository(dbpool)
+
+	if err := server.Setup(&cfg.Server, repo); err != nil {
 		log.Fatalf("server setup failed: %s\n", err)
 	}
 }

@@ -5,12 +5,12 @@ import (
 	"log"
 
 	"github.com/NERFTHISPLS/rest-todo-list/internal/config"
+	"github.com/NERFTHISPLS/rest-todo-list/internal/repository"
 	"github.com/NERFTHISPLS/rest-todo-list/internal/server/routes"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Setup(cfg *config.ConfServer, dbpool *pgxpool.Pool) error {
+func Setup(cfg *config.ConfServer, repo *repository.TaskRepository) error {
 	log.Printf("starting server on :%d", cfg.Port)
 
 	app := fiber.New(fiber.Config{
@@ -20,7 +20,7 @@ func Setup(cfg *config.ConfServer, dbpool *pgxpool.Pool) error {
 	})
 	serverPort := fmt.Sprintf(":%d", cfg.Port)
 
-	routes.Setup(app, dbpool)
+	routes.Setup(app, repo)
 
 	return app.Listen(serverPort)
 }

@@ -2,12 +2,12 @@ package routes
 
 import (
 	"github.com/NERFTHISPLS/rest-todo-list/internal/handlers/tasks"
+	"github.com/NERFTHISPLS/rest-todo-list/internal/repository"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Setup(app *fiber.App, dbpool *pgxpool.Pool) {
-	taskHandler := tasks.NewHandler(dbpool)
+func Setup(app *fiber.App, repo *repository.TaskRepository) {
+	taskHandler := tasks.NewHandler(repo)
 
 	app.Get("/tasks", taskHandler.List)
 	app.Post("/tasks", taskHandler.Create)
