@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/joeshaw/envdecode"
@@ -10,6 +10,7 @@ import (
 type Conf struct {
 	Server ConfServer
 	ConfDB ConfDB
+	Env    string `env:"ENV,default=dev"`
 }
 
 type ConfServer struct {
@@ -30,7 +31,8 @@ type ConfDB struct {
 func New() *Conf {
 	var c Conf
 	if err := envdecode.StrictDecode(&c); err != nil {
-		log.Fatalf("failed to decode: %s\n", err)
+		slog.Error("failed to decode environment variables", "error", err)
+		panic(err)
 	}
 
 	return &c
