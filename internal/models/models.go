@@ -19,7 +19,7 @@ type Task struct {
 	// Описание задачи
 	// required: false
 	// example: Взять 2 литра и хлеб
-	Description *string `json:"description,omitempty"`
+	Description string `json:"description"`
 
 	// Статус задачи
 	// required: true
