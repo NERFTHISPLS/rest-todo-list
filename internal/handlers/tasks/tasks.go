@@ -60,12 +60,12 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 		return jsonError(c, fiber.StatusBadRequest, "invalid request")
 	}
 
-	if strings.TrimSpace(task.Title) == "" {
+	if task.Title == nil {
 		return jsonError(c, fiber.StatusBadRequest, "title is required")
 	}
 
-	if strings.TrimSpace(task.Status) == "" {
-		task.Status = models.DefaultTaskStatus
+	if task.Status == nil {
+		*task.Status = models.DefaultTaskStatus
 	}
 
 	query := `INSERT INTO tasks (title, description, status) VALUES ($1, $2, $3) RETURNING id`
@@ -84,47 +84,22 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 		return err
 	}
 
-	task := &models.Task{}
-	if err := c.BodyParser(task); err != nil {
+	updates := make(map[string]any)
+	if err := c.BodyParser(&updates); err != nil {
 		return jsonError(c, fiber.StatusBadRequest, "invalid request")
 	}
 
-	setClauses := []string{}
-	args := []any{}
-	argPos := 1
-
-	if task.Title != "" {
-		setClauses = append(setClauses, fmt.Sprintf("title = $%d", argPos))
-		args = append(args, task.Title)
-		argPos++
+	if titleVal, ok := updates["title"]; ok {
+		str, ok := titleVal.(string)
+		if !ok || strings.TrimSpace(str) == "" {
+			return jsonError(c, fiber.StatusBadRequest, "title cannot be empty")
+		}
 	}
 
-	if task.Description != "" {
-		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argPos))
-		args = append(args, task.Description)
-		argPos++
+	query, args, err := buildUpdateQuery("tasks", updates, id)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	if task.Status != "" {
-		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argPos))
-		args = append(args, task.Status)
-		argPos++
-	}
-
-	if len(setClauses) == 0 {
-		return jsonError(c, fiber.StatusBadRequest, "no fields to update")
-	}
-
-	setClauses = append(setClauses, "updated_at = now()")
-
-	query := fmt.Sprintf(`
-		UPDATE tasks
-		SET %s
-		WHERE id = $%d
-		RETURNING id, title, description, status, created_at, updated_at
-	`, strings.Join(setClauses, ", "), argPos)
-
-	args = append(args, id)
 
 	row := h.dbPool.QueryRow(c.Context(), query, args...)
 
@@ -177,4 +152,34 @@ func parseID(c *fiber.Ctx) (int, error) {
 
 func jsonError(c *fiber.Ctx, status int, msg string) error {
 	return c.Status(status).JSON(fiber.Map{"error": msg})
+}
+
+func buildUpdateQuery(table string, updates map[string]any, id int) (string, []any, error) {
+	if len(updates) == 0 {
+		return "", nil, fmt.Errorf("no fields to update")
+	}
+
+	setClauses := []string{}
+	args := []any{}
+	i := 1
+
+	for k, v := range updates {
+		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", k, i))
+		args = append(args, v)
+		i++
+	}
+
+	// Обновляем updated_at всегда
+	setClauses = append(setClauses, "updated_at = now()")
+
+	query := fmt.Sprintf(`
+        UPDATE %s
+        SET %s
+        WHERE id = $%d
+        RETURNING id, title, description, status, created_at, updated_at
+    `, table, strings.Join(setClauses, ", "), i)
+
+	args = append(args, id)
+
+	return query, args, nil
 }
