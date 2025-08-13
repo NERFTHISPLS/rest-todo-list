@@ -11,15 +11,17 @@ import (
 func main() {
 	cfg := config.New()
 
+	db, err := database.New(&cfg.ConfDB)
+	if err != nil {
+		log.Fatalf("error while connecting to database: %s\n", err)
+	}
+	defer db.Close()
+
+	if err := database.Migrate(db); err != nil {
+		log.Fatalf("error while migrating to database: %s\n", err)
+	}
+
 	if err := server.Setup(&cfg.Server); err != nil {
 		log.Fatalf("server setup failed: %s\n", err)
 	}
-
-	log.Println("server is working")
-
-	if err := database.Setup(&cfg.ConfDB); err != nil {
-		log.Fatalf("error while connecting to database: %s\n", err)
-	}
-
-	log.Println("database is connected")
 }
