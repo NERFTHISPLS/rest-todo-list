@@ -41,17 +41,10 @@ func (r *TaskRepository) List(c *fiber.Ctx) ([]models.Task, error) {
 
 	for rows.Next() {
 		var t models.Task
-		var desc string
-
-		if err := rows.Scan(&t.ID, &t.Title, &desc, &t.Status, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			slog.Error("failed to scan task row", "error", err)
-			return nil, err
-		}
 
-		if desc != "" {
-			t.Description = &desc
-		} else {
-			t.Description = nil
+			return nil, err
 		}
 
 		tasks = append(tasks, t)
@@ -135,21 +128,15 @@ func (r *TaskRepository) Update(c *fiber.Ctx, id int, updates map[string]any) (*
 	row := r.dbPool.QueryRow(ctx, query, args...)
 
 	t := &models.Task{}
-	var desc string
-	if err := row.Scan(&t.ID, &t.Title, &desc, &t.Status, &t.CreatedAt, &t.UpdatedAt); err != nil {
+	if err := row.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt); err != nil {
 		if errors.Is(err, fiber.ErrNotFound) {
 			slog.Warn("task not found for update", "task_id", id)
 			return nil, fiber.ErrNotFound
 		}
 
 		slog.Error("database query failed: update task", "error", err, "task_id", id)
-		return nil, err
-	}
 
-	if desc != "" {
-		t.Description = &desc
-	} else {
-		t.Description = nil
+		return nil, err
 	}
 
 	if slog.Default().Enabled(ctx, slog.LevelDebug) {
