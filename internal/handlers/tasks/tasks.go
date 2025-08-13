@@ -17,12 +17,27 @@ type Handler struct {
 	repo *repository.TaskRepository
 }
 
+type taskRequest struct {
+	Title       string  `json:"title" example:"Купить молоко"`
+	Description *string `json:"description,omitempty" example:"Взять 2 литра и хлеб"`
+	Status      string  `json:"status" example:"new"`
+}
+
 func NewHandler(repo *repository.TaskRepository) *Handler {
 	return &Handler{
 		repo: repo,
 	}
 }
 
+// List возвращает список всех задач
+// @Summary Получить список всех задач
+// @Description Возвращает список всех задач
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Task "Список задач"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /tasks [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	ctx := c.Context()
 
@@ -41,6 +56,17 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	return c.JSON(tasks)
 }
 
+// Create создает новую задачу
+// @Summary Создать новую задачу
+// @Description Создает новую задачу с указанными параметрами
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param task body taskRequest true "Данные задачи (title, description, status)"
+// @Success 200 {object} models.Task "Созданная задача"
+// @Failure 400 {object} map[string]string "Неверный запрос"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /tasks [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	ctx := c.Context()
 
@@ -71,6 +97,19 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	return c.JSON(task)
 }
 
+// Update обновляет существующую задачу
+// @Summary Обновить задачу
+// @Description Обновляет существующую задачу по ID
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param id path int true "ID задачи"
+// @Param task body taskRequest true "Данные задачи (title, description, status)"
+// @Success 200 {object} models.Task "Обновленная задача"
+// @Failure 400 {object} map[string]string "Неверный запрос"
+// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /tasks/{id} [put]
 func (h *Handler) Update(c *fiber.Ctx) error {
 	ctx := c.Context()
 
@@ -133,6 +172,18 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	return c.JSON(t)
 }
 
+// Delete удаляет задачу по ID
+// @Summary Удалить задачу
+// @Description Удаляет задачу по указанному ID
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param id path int true "ID задачи"
+// @Success 204 "Задача успешно удалена"
+// @Failure 400 {object} map[string]string "Неверный ID"
+// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /tasks/{id} [delete]
 func (h *Handler) Delete(c *fiber.Ctx) error {
 	ctx := c.Context()
 

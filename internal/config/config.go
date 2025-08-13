@@ -14,6 +14,7 @@ type Conf struct {
 }
 
 type ConfServer struct {
+	Host         string        `env:"SERVER_HOST,default=localhost"`
 	Port         int           `env:"SERVER_PORT,required"`
 	TimeoutRead  time.Duration `env:"SERVER_TIMEOUT_READ,required"`
 	TimeoutWrite time.Duration `env:"SERVER_TIMEOUT_WRITE,required"`
