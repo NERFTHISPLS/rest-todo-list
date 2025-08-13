@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Migrate(db *pgxpool.Pool) error {
+func Migrate(dbpool *pgxpool.Pool) error {
 	query := `
   CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
@@ -18,7 +18,7 @@ func Migrate(db *pgxpool.Pool) error {
     updated_at TIMESTAMP DEFAULT now()
   );`
 
-	if _, err := db.Exec(context.Background(), query); err != nil {
+	if _, err := dbpool.Exec(context.Background(), query); err != nil {
 		log.Printf("error while creating the database: %s\n", err)
 		return err
 	}
