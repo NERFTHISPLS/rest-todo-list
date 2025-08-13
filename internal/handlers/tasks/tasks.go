@@ -3,7 +3,6 @@ package tasks
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -25,14 +24,13 @@ func NewHandler(dbpool *pgxpool.Pool) *Handler {
 
 func (h *Handler) List(c *fiber.Ctx) error {
 	if h.dbPool == nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("database connection is not initialized")
+		return jsonError(c, fiber.StatusInternalServerError, "database connection is not initialized")
 	}
 
 	query := `SELECT * FROM tasks`
 	rows, err := h.dbPool.Query(c.Context(), query)
 	if err != nil {
-		log.Printf("error while running the query on the database: %s\n", err)
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return jsonError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer rows.Close()
 
@@ -43,16 +41,14 @@ func (h *Handler) List(c *fiber.Ctx) error {
 		if err := rows.Scan(
 			&task.ID, &task.Title, &task.Description, &task.Status, &task.CreatedAt, &task.UpdatedAt,
 		); err != nil {
-			log.Printf("error while scanning the rows: %s", err)
-			return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+			return jsonError(c, fiber.StatusInternalServerError, err.Error())
 		}
 
 		tasks = append(tasks, task)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Println(err)
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return jsonError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(tasks)
@@ -61,11 +57,11 @@ func (h *Handler) List(c *fiber.Ctx) error {
 func (h *Handler) Create(c *fiber.Ctx) error {
 	task := &models.Task{}
 	if err := c.BodyParser(task); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
+		return jsonError(c, fiber.StatusBadRequest, "invalid request")
 	}
 
 	if strings.TrimSpace(task.Title) == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "title is required"})
+		return jsonError(c, fiber.StatusBadRequest, "title is required")
 	}
 
 	if strings.TrimSpace(task.Status) == "" {
@@ -76,22 +72,21 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	if err := h.dbPool.QueryRow(
 		c.Context(), query, task.Title, task.Description, task.Status,
 	).Scan(&task.ID); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create task"})
+		return jsonError(c, fiber.StatusInternalServerError, "failed to create task")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(task)
 }
 
 func (h *Handler) Update(c *fiber.Ctx) error {
-	idParam := c.Params("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil || id <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
+	id, err := parseID(c)
+	if err != nil {
+		return err
 	}
 
 	task := &models.Task{}
 	if err := c.BodyParser(task); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
+		return jsonError(c, fiber.StatusBadRequest, "invalid request")
 	}
 
 	setClauses := []string{}
@@ -117,7 +112,7 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	}
 
 	if len(setClauses) == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no fields to update"})
+		return jsonError(c, fiber.StatusBadRequest, "no fields to update")
 	}
 
 	setClauses = append(setClauses, "updated_at = now()")
@@ -144,31 +139,42 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 		&updatedTask.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "task not found"})
+			return jsonError(c, fiber.StatusNotFound, "task not found")
 		}
 
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update task"})
+		return jsonError(c, fiber.StatusInternalServerError, "failed to update task")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(updatedTask)
 }
 
 func (h *Handler) Delete(c *fiber.Ctx) error {
-	idParam := c.Params("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil || id <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
+	id, err := parseID(c)
+	if err != nil {
+		return err
 	}
 
 	query := `DELETE FROM tasks WHERE id = $1`
 	cmdTag, err := h.dbPool.Exec(c.Context(), query, id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete task"})
+		return jsonError(c, fiber.StatusInternalServerError, "failed to delete task")
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "task not found"})
+		return jsonError(c, fiber.StatusNotFound, "task not found")
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func parseID(c *fiber.Ctx) (int, error) {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil || id <= 0 {
+		return 0, fiber.NewError(fiber.StatusBadRequest, "invalid id")
+	}
+	return id, nil
+}
+
+func jsonError(c *fiber.Ctx, status int, msg string) error {
+	return c.Status(status).JSON(fiber.Map{"error": msg})
 }
