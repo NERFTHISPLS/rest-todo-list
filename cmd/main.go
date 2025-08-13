@@ -1,3 +1,10 @@
+// REST API для управления списком задач
+// @title REST API Todo List
+// @version 1.0
+// @description REST API сервис для управления задачами
+
+// @host localhost:8080
+// @basePath /
 package main
 
 import (

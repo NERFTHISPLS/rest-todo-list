@@ -9,6 +9,7 @@ import (
 	"github.com/NERFTHISPLS/rest-todo-list/internal/repository"
 	"github.com/NERFTHISPLS/rest-todo-list/internal/server/routes"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
@@ -39,10 +40,16 @@ func Setup(cfg *config.ConfServer, repo *repository.TaskRepository) error {
 		},
 	}))
 
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE",
+	}))
+
 	serverPort := fmt.Sprintf(":%d", cfg.Port)
 
 	routes.Setup(app, repo)
 
 	slog.Info("server configured successfully", "port", cfg.Port)
+
 	return app.Listen(serverPort)
 }

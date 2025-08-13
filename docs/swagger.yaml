@@ -1,0 +1,196 @@
+basePath: /
+definitions:
+  models.Task:
+    properties:
+      created_at:
+        description: |-
+          Дата создания (только в ответе)
+          example: 2025-08-13T14:52:00Z
+        type: string
+      description:
+        description: |-
+          Описание задачи
+          required: false
+          example: Взять 2 литра и хлеб
+        type: string
+      id:
+        description: |-
+          ID задачи (только в ответе)
+          example: 1
+        type: integer
+      status:
+        description: |-
+          Статус задачи
+          required: true
+          enum: new,in_progress,done
+          example: new
+        type: string
+      title:
+        description: |-
+          Заголовок задачи
+          required: true
+          example: Купить молоко
+        type: string
+      updated_at:
+        description: |-
+          Дата последнего обновления (только в ответе)
+          example: 2025-08-13T15:12:00Z
+        type: string
+    type: object
+  tasks.taskRequest:
+    properties:
+      description:
+        example: Взять 2 литра и хлеб
+        type: string
+      status:
+        example: new
+        type: string
+      title:
+        example: Купить молоко
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API сервис для управления задачами
+  title: REST API Todo List
+  version: "1.0"
+paths:
+  /tasks:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех задач
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач
+          schema:
+            items:
+              $ref: '#/definitions/models.Task'
+            type: array
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить список всех задач
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Создает новую задачу с указанными параметрами
+      parameters:
+      - description: Данные задачи (title, description, status)
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/tasks.taskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Созданная задача
+          schema:
+            $ref: '#/definitions/models.Task'
+        "400":
+          description: Неверный запрос
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать новую задачу
+      tags:
+      - tasks
+  /tasks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет задачу по указанному ID
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Задача успешно удалена
+        "400":
+          description: Неверный ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Задача не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить задачу
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Обновляет существующую задачу по ID
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные задачи (title, description, status)
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/tasks.taskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновленная задача
+          schema:
+            $ref: '#/definitions/models.Task'
+        "400":
+          description: Неверный запрос
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Задача не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновить задачу
+      tags:
+      - tasks
+swagger: "2.0"
