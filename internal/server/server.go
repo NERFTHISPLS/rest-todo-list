@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/NERFTHISPLS/rest-todo-list/internal/config"
+	"github.com/NERFTHISPLS/rest-todo-list/internal/server/routes"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -18,9 +19,7 @@ func Setup(cfg *config.ConfServer) error {
 	})
 	serverPort := fmt.Sprintf(":%d", cfg.Port)
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!!!")
-	})
+	routes.Setup(app)
 
 	return app.Listen(serverPort)
 }
