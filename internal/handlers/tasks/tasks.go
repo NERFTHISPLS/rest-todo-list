@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"log"
+	"strings"
 
 	"github.com/NERFTHISPLS/rest-todo-list/internal/models"
 	"github.com/gofiber/fiber/v2"
@@ -23,7 +24,8 @@ func (h *Handler) List(c *fiber.Ctx) error {
 		return c.Status(500).SendString("database connection is not initialized")
 	}
 
-	rows, err := h.dbPool.Query(c.Context(), "SELECT * FROM tasks")
+	query := `SELECT * FROM tasks`
+	rows, err := h.dbPool.Query(c.Context(), query)
 	if err != nil {
 		log.Printf("error while running the query on the database: %s\n", err)
 		return c.Status(500).SendString(err.Error())
@@ -53,7 +55,27 @@ func (h *Handler) List(c *fiber.Ctx) error {
 }
 
 func (h *Handler) Create(c *fiber.Ctx) error {
-	return nil
+	task := &models.Task{}
+	if err := c.BodyParser(task); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+	}
+
+	if strings.TrimSpace(task.Title) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "title is required"})
+	}
+
+	if task.Status == "" {
+		task.Status = models.DefaultTaskStatus
+	}
+
+	query := `INSERT INTO tasks (title, description, status) VALUES ($1, $2, $3) RETURNING id`
+	if err := h.dbPool.QueryRow(
+		c.Context(), query, task.Title, task.Description, task.Status,
+	).Scan(&task.ID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to create task"})
+	}
+
+	return c.Status(200).JSON(task)
 }
 
 func (h *Handler) Update(c *fiber.Ctx) error {
