@@ -1,11 +1,15 @@
 package tasks
 
 import (
+	"errors"
+	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/NERFTHISPLS/rest-todo-list/internal/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -64,7 +68,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "title is required"})
 	}
 
-	if task.Status == "" {
+	if strings.TrimSpace(task.Status) == "" {
 		task.Status = models.DefaultTaskStatus
 	}
 
@@ -79,7 +83,74 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 }
 
 func (h *Handler) Update(c *fiber.Ctx) error {
-	return nil
+	idParam := c.Params("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil || id <= 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+	}
+
+	task := &models.Task{}
+	if err := c.BodyParser(task); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+	}
+
+	setClauses := []string{}
+	args := []any{}
+	argPos := 1
+
+	if task.Title != "" {
+		setClauses = append(setClauses, fmt.Sprintf("title = $%d", argPos))
+		args = append(args, task.Title)
+		argPos++
+	}
+
+	if task.Description != "" {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argPos))
+		args = append(args, task.Description)
+		argPos++
+	}
+
+	if task.Status != "" {
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argPos))
+		args = append(args, task.Status)
+		argPos++
+	}
+
+	if len(setClauses) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "no fields to update"})
+	}
+
+	setClauses = append(setClauses, "updated_at = now()")
+
+	query := fmt.Sprintf(`
+		UPDATE tasks
+		SET %s
+		WHERE id = $%d
+		RETURNING id, title, description, status, created_at, updated_at
+	`, strings.Join(setClauses, ", "), argPos)
+
+	args = append(args, id)
+
+	row := h.dbPool.QueryRow(c.Context(), query, args...)
+
+	updatedTask := &models.Task{}
+
+	if err := row.Scan(
+		&updatedTask.ID,
+		&updatedTask.Title,
+		&updatedTask.Description,
+		&updatedTask.Status,
+		&updatedTask.CreatedAt,
+		&updatedTask.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return c.Status(404).JSON(fiber.Map{"error": "task not found"})
+		}
+
+		return c.Status(500).JSON(fiber.Map{"error": "failed to update task"})
+	}
+
+	return c.Status(200).JSON(updatedTask)
 }
 
 func (h *Handler) Delete(c *fiber.Ctx) error {
