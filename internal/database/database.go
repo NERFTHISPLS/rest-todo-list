@@ -26,5 +26,5 @@ func New(cfg *config.ConfDB) (*pgxpool.Pool, error) {
 
 	log.Println("database is connected")
 
-	return dbpool, err
+	return dbpool, nil
 }
