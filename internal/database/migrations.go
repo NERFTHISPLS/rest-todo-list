@@ -2,12 +2,14 @@ package database
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func Migrate(dbpool *pgxpool.Pool) error {
+	slog.Info("starting database migration")
+
 	query := `
   CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
@@ -19,11 +21,10 @@ func Migrate(dbpool *pgxpool.Pool) error {
   );`
 
 	if _, err := dbpool.Exec(context.Background(), query); err != nil {
-		log.Printf("error while creating the database: %s\n", err)
+		slog.Error("error while creating the database", "error", err)
 		return err
 	}
 
-	log.Println("migration completed: tasks table created")
-
+	slog.Info("migration completed successfully", "table", "tasks")
 	return nil
 }
